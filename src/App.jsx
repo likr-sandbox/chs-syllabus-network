@@ -28,7 +28,8 @@ const categories = [
   "生命科学科",
   "化学科",
 ];
-function Drawing({ data, target }) {
+
+function Drawing({ data, target, onClickNode }) {
   const left = d3.min(Object.values(data.nodes), (d) => d.x);
   const right = d3.max(Object.values(data.nodes), (d) => d.x);
   const top = d3.min(Object.values(data.nodes), (d) => d.y);
@@ -93,12 +94,18 @@ function Drawing({ data, target }) {
               return (
                 <g key={node.id}>
                   <text
+                    className="is-unselectable is-clickable"
                     x={node.x}
                     y={node.y}
                     r={8}
                     textAnchor="middle"
                     dominantBaseline="central"
                     fontWeight="bold"
+                    onClick={() => {
+                      if (onClickNode) {
+                        onClickNode(node);
+                      }
+                    }}
                   >
                     {node["令和２年度以降入学者"]}
                   </text>
@@ -115,6 +122,7 @@ function Drawing({ data, target }) {
 export default function App() {
   const [data, setData] = useState();
   const [target, setTarget] = useState();
+  const [selectedNode, setSelectedNode] = useState(null);
   useEffect(() => {
     (async () => {
       const response = await fetch("syllabus-network.json");
@@ -134,29 +142,113 @@ export default function App() {
   return (
     <section className="section">
       <div className="container">
-        <div className="field">
-          <label className="label">科目群</label>
-          <div className="control">
-            <div className="select is-fullwidth">
-              <select
-                value={target}
-                onChange={(event) => {
-                  setTarget(event.target.value);
+        <div className="columns">
+          <div className="column is-9">
+            <div className="field">
+              <label className="label">科目群</label>
+              <div className="control">
+                <div className="select is-fullwidth">
+                  <select
+                    value={target}
+                    onChange={(event) => {
+                      setTarget(event.target.value);
+                    }}
+                  >
+                    <option key="none" value=""></option>
+                    {categories.map((item) => {
+                      return (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
+            </div>
+            {data && (
+              <Drawing
+                data={data}
+                target={target}
+                onClickNode={(item) => {
+                  setSelectedNode(item);
                 }}
-              >
-                <option key="none" value=""></option>
-                {categories.map((item) => {
-                  return (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  );
-                })}
-              </select>
+              />
+            )}
+          </div>
+          <div className="column is-3">
+            <div className="field">
+              <div className="label">科目名</div>
+              <div className="control">
+                <input
+                  className="input"
+                  value={selectedNode && selectedNode["令和２年度以降入学者"]}
+                  readOnly
+                />
+              </div>
+            </div>
+            <div className="field">
+              <div className="label">教員名</div>
+              <div className="control">
+                <input
+                  className="input"
+                  value={selectedNode && selectedNode["教員名"]}
+                  readOnly
+                />
+              </div>
+            </div>
+            <div className="field">
+              <div className="label">授業形態</div>
+              <div className="control">
+                <input
+                  className="input"
+                  value={selectedNode && selectedNode["授業形態"]}
+                  readOnly
+                />
+              </div>
+            </div>
+            <div className="field">
+              <div className="label">授業概要</div>
+              <div className="control">
+                <textarea
+                  className="textarea"
+                  value={selectedNode && selectedNode["授業概要"]}
+                  readOnly
+                />
+              </div>
+            </div>
+            <div className="field">
+              <div className="label">授業のねらい・到達目標</div>
+              <div className="control">
+                <textarea
+                  className="textarea"
+                  value={selectedNode && selectedNode["授業のねらい・到達目標"]}
+                  readOnly
+                />
+              </div>
+            </div>
+            <div className="field">
+              <div className="label">授業の形式</div>
+              <div className="control">
+                <input
+                  className="input"
+                  value={selectedNode && selectedNode["授業の形式"]}
+                  readOnly
+                />
+              </div>
+            </div>
+            <div className="field">
+              <div className="label">授業の方法</div>
+              <div className="control">
+                <textarea
+                  className="textarea"
+                  value={selectedNode && selectedNode["授業の方法"]}
+                  readOnly
+                />
+              </div>
             </div>
           </div>
         </div>
-        {data && <Drawing data={data} target={target} />}
       </div>
     </section>
   );
