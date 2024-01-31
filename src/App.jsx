@@ -266,12 +266,9 @@ export default function App() {
         nodes[node.id] = node;
       }
       data.nodes = nodes;
-      console.log(data);
       setData(data);
     })();
   }, []);
-
-  console.log(target);
 
   return (
     <section className="section">
