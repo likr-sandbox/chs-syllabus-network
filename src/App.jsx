@@ -6,6 +6,11 @@ async function fetchSubject(id) {
   return response.json();
 }
 
+async function fetchSubjectIds(keyword) {
+  const response = await fetch(`/.netlify/functions/search?q=${keyword}`);
+  return response.json();
+}
+
 const categories = [
   "全学共通教育科目",
   "総合教育科目",
@@ -72,7 +77,7 @@ function DrawingContent({ data, onClickNode, target }) {
                 cx={node.x}
                 cy={node.y}
                 r={5}
-                opacity={node["科目群"] === target ? 1 : 0.3}
+                opacity={target.includes(node["科目ID"]) ? 1 : 0.3}
               >
                 <title>
                   {node["科目名"]}({node["科目群"]}):{node["教員名"]}
@@ -84,7 +89,7 @@ function DrawingContent({ data, onClickNode, target }) {
       </g>
       <g>
         {Object.values(data.nodes).map((node) => {
-          if (node["科目群"] === target) {
+          if (target.includes(node["科目ID"])) {
             return (
               <g key={node.id}>
                 <text
@@ -247,7 +252,7 @@ function SubjectDetail({ subject }) {
 
 export default function App() {
   const [data, setData] = useState();
-  const [target, setTarget] = useState();
+  const [target, setTarget] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
 
   useEffect(() => {
@@ -266,6 +271,8 @@ export default function App() {
     })();
   }, []);
 
+  console.log(target);
+
   return (
     <section className="section">
       <div className="container">
@@ -276,9 +283,14 @@ export default function App() {
               <div className="control">
                 <div className="select is-fullwidth">
                   <select
-                    value={target}
                     onChange={(event) => {
-                      setTarget(event.target.value);
+                      setTarget(
+                        Object.values(data.nodes)
+                          .filter(
+                            (node) => node["科目群"] === event.target.value,
+                          )
+                          .map((node) => node["科目ID"]),
+                      );
                     }}
                   >
                     <option key="none" value=""></option>
@@ -291,6 +303,22 @@ export default function App() {
                     })}
                   </select>
                 </div>
+              </div>
+            </div>
+            <div className="field">
+              <label className="label">キーワード</label>
+              <div className="control">
+                <form
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    const ids = await fetchSubjectIds(
+                      event.target.elements.keyword.value,
+                    );
+                    setTarget(ids);
+                  }}
+                >
+                  <input className="input" name="keyword" />
+                </form>
               </div>
             </div>
             {data && (
