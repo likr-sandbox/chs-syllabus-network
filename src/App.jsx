@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
 
 async function fetchSubject(id) {
@@ -34,6 +34,102 @@ const categories = [
   "化学科",
 ];
 
+function DrawingContent({ data, onClickNode, target }) {
+  const color = d3.scaleOrdinal(d3.schemeCategory10);
+  return (
+    <>
+      <g>
+        {data.links.map((link) => {
+          const line = d3
+            .line()
+            .x((key) => data.nodes[key].x)
+            .y((key) => data.nodes[key].y);
+          return (
+            <path
+              key={`${link.source}:${link.target}`}
+              fill="none"
+              stroke="#888"
+              opacity="0.5"
+              d={line([link.source, link.target])}
+            />
+          );
+        })}
+      </g>
+      <g>
+        {Object.values(data.nodes).map((node) => {
+          return (
+            <g
+              key={node.id}
+              className="is-unselectable is-clickable"
+              onClick={() => {
+                if (onClickNode) {
+                  onClickNode(node);
+                }
+              }}
+            >
+              <circle
+                fill={color(node["科目群"])}
+                cx={node.x}
+                cy={node.y}
+                r={5}
+                opacity={node["科目群"] === target ? 1 : 0.3}
+              >
+                <title>
+                  {node["科目名"]}({node["科目群"]}):{node["教員名"]}
+                </title>
+              </circle>
+            </g>
+          );
+        })}
+      </g>
+      <g>
+        {Object.values(data.nodes).map((node) => {
+          if (node["科目群"] === target) {
+            return (
+              <g key={node.id}>
+                <text
+                  className="is-unselectable is-clickable"
+                  x={node.x}
+                  y={node.y}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize="12"
+                  fontWeight="bold"
+                  onClick={() => {
+                    if (onClickNode) {
+                      onClickNode(node);
+                    }
+                  }}
+                >
+                  {node["科目名"]}
+                </text>
+              </g>
+            );
+          }
+        })}
+      </g>
+    </>
+  );
+}
+
+function ZoomableSvg({ viewBox, children }) {
+  const svgRef = useRef();
+  const [transform, setTransform] = useState({ k: 1, x: 0, y: 0 });
+  useEffect(() => {
+    const zoom = d3.zoom().on("zoom", (event) => {
+      const { x, y, k } = event.transform;
+      setTransform({ k, x, y });
+    });
+    d3.select(svgRef.current).call(zoom);
+  }, []);
+  const { k, x, y } = transform;
+  return (
+    <svg ref={svgRef} viewBox={viewBox}>
+      <g transform={`translate(${x},${y})scale(${k})`}>{children}</g>
+    </svg>
+  );
+}
+
 function Drawing({ data, target, onClickNode }) {
   const left = d3.min(Object.values(data.nodes), (d) => d.x);
   const right = d3.max(Object.values(data.nodes), (d) => d.x);
@@ -42,83 +138,11 @@ function Drawing({ data, target, onClickNode }) {
   const width = right - left;
   const height = bottom - top;
   const size = Math.max(width, height);
-  const color = d3.scaleOrdinal(d3.schemeCategory10);
   return (
     <figure className="image is-square">
-      <svg
-        viewBox={`${left} ${top} ${size} ${size}`}
-        style={{
-          display: "block",
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          top: 0,
-        }}
-      >
-        <g>
-          {data.links.map((link) => {
-            const line = d3
-              .line()
-              .x((key) => data.nodes[key].x)
-              .y((key) => data.nodes[key].y);
-            return (
-              <path
-                key={`${link.source}:${link.target}`}
-                fill="none"
-                stroke="#888"
-                opacity="0.5"
-                d={line([link.source, link.target])}
-              />
-            );
-          })}
-        </g>
-        <g>
-          {Object.values(data.nodes).map((node) => {
-            return (
-              <g key={node.id}>
-                <circle
-                  fill={color(node["科目群"])}
-                  cx={node.x}
-                  cy={node.y}
-                  r={5}
-                  opacity={node["科目群"] === target ? 1 : 0.3}
-                >
-                  <title>
-                    {node["科目名"]}({node["科目群"]}):{node["教員名"]}
-                  </title>
-                </circle>
-              </g>
-            );
-          })}
-        </g>
-        <g>
-          {Object.values(data.nodes).map((node) => {
-            if (node["科目群"] === target) {
-              return (
-                <g key={node.id}>
-                  <text
-                    className="is-unselectable is-clickable"
-                    x={node.x}
-                    y={node.y}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fontSize="12"
-                    fontWeight="bold"
-                    onClick={() => {
-                      if (onClickNode) {
-                        onClickNode(node);
-                      }
-                    }}
-                  >
-                    {node["科目名"]}
-                  </text>
-                </g>
-              );
-            }
-          })}
-        </g>
-      </svg>
+      <ZoomableSvg viewBox={`${left} ${top} ${size} ${size}`}>
+        <DrawingContent data={data} onClickNode={onClickNode} target={target} />
+      </ZoomableSvg>
     </figure>
   );
 }
@@ -130,7 +154,7 @@ function SubjectDetail({ subject }) {
         <div className="label">科目名</div>
         <div className="control">
           <input
-            className="input"
+            className="input is-static"
             value={subject && subject["科目名"]}
             readOnly
           />
@@ -140,8 +164,18 @@ function SubjectDetail({ subject }) {
         <div className="label">教員名</div>
         <div className="control">
           <input
-            className="input"
+            className="input is-static"
             value={subject && subject["教員名"]}
+            readOnly
+          />
+        </div>
+      </div>
+      <div className="field">
+        <div className="label">科目群</div>
+        <div className="control">
+          <input
+            className="input is-static"
+            value={subject && subject["科目群"]}
             readOnly
           />
         </div>
@@ -150,7 +184,7 @@ function SubjectDetail({ subject }) {
         <div className="label">授業形態</div>
         <div className="control">
           <input
-            className="input"
+            className="input is-static"
             value={subject && subject["授業形態"]}
             readOnly
           />
@@ -180,7 +214,7 @@ function SubjectDetail({ subject }) {
         <div className="label">授業の形式</div>
         <div className="control">
           <input
-            className="input"
+            className="input is-static"
             value={subject && subject["授業の形式"]}
             readOnly
           />
@@ -196,6 +230,17 @@ function SubjectDetail({ subject }) {
           />
         </div>
       </div>
+      {subject &&
+        subject["授業計画"].map((plan) => {
+          return (
+            <div key={plan["回数"]} className="field">
+              <div className="label">第{plan["回数"]}回</div>
+              <div className="control">
+                <textarea className="textarea" value={plan["内容"]} readOnly />
+              </div>
+            </div>
+          );
+        })}
     </>
   );
 }
@@ -211,8 +256,8 @@ export default function App() {
       const data = await response.json();
       const nodes = {};
       for (const node of data.nodes) {
-        node.x *= 30;
-        node.y *= 30;
+        node.x *= 50;
+        node.y *= 50;
         nodes[node.id] = node;
       }
       data.nodes = nodes;
@@ -259,7 +304,13 @@ export default function App() {
               />
             )}
           </div>
-          <div className="column is-3">
+          <div
+            className="column is-3"
+            style={{
+              maxHeight: "1000px",
+              overflowY: "scroll",
+            }}
+          >
             <SubjectDetail subject={selectedSubject} />
           </div>
         </div>

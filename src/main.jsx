@@ -1,4 +1,5 @@
 import "bulma/css/bulma.css";
+import "./App.css";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 
