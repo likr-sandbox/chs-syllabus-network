@@ -30,10 +30,10 @@ const categories = [
 ];
 
 function Drawing({ data, target, onClickNode }) {
-  const left = d3.min(Object.values(data.nodes), (d) => d.x);
-  const right = d3.max(Object.values(data.nodes), (d) => d.x);
-  const top = d3.min(Object.values(data.nodes), (d) => d.y);
-  const bottom = d3.max(Object.values(data.nodes), (d) => d.y);
+  const left = d3.min(Object.values(data.nodes), (d) => d.x - d.r);
+  const right = d3.max(Object.values(data.nodes), (d) => d.x + d.r);
+  const top = d3.min(Object.values(data.nodes), (d) => d.y - d.r);
+  const bottom = d3.max(Object.values(data.nodes), (d) => d.y + d.r);
   const width = right - left;
   const height = bottom - top;
   const size = Math.max(width, height);
@@ -51,68 +51,70 @@ function Drawing({ data, target, onClickNode }) {
           top: 0,
         }}
       >
-        <g>
-          {data.links.map((link) => {
-            const line = d3
-              .line()
-              .x((key) => data.nodes[key].x)
-              .y((key) => data.nodes[key].y);
-            return (
-              <path
-                key={`${link.source}:${link.target}`}
-                fill="none"
-                stroke="#888"
-                opacity="0.5"
-                d={line([link.source, link.target])}
-              />
-            );
-          })}
-        </g>
-        <g>
-          {Object.values(data.nodes).map((node) => {
-            return (
-              <g key={node.id}>
-                <circle
-                  fill={color(node["科目群"])}
-                  cx={node.x}
-                  cy={node.y}
-                  r={8}
-                  opacity={node["科目群"] === target ? 1 : 0.3}
-                >
-                  <title>
-                    {node["令和２年度以降入学者"]}({node["科目群"]}):
-                    {node["教員名"]}
-                  </title>
-                </circle>
-              </g>
-            );
-          })}
-        </g>
-        <g>
-          {Object.values(data.nodes).map((node) => {
-            if (node["科目群"] === target) {
+        <g transform="scale(1)">
+          <g>
+            {data.links.map((link) => {
+              const line = d3
+                .line()
+                .x((key) => data.nodes[key].x)
+                .y((key) => data.nodes[key].y);
+              return (
+                <path
+                  key={`${link.source}:${link.target}`}
+                  fill="none"
+                  stroke="#888"
+                  strokeWidth="3"
+                  opacity="0.5"
+                  d={line([link.source, link.target])}
+                />
+              );
+            })}
+          </g>
+          <g>
+            {Object.values(data.nodes).map((node) => {
               return (
                 <g key={node.id}>
-                  <text
-                    className="is-unselectable is-clickable"
-                    x={node.x}
-                    y={node.y}
-                    r={8}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fontWeight="bold"
-                    onClick={() => {
-                      if (onClickNode) {
-                        onClickNode(node);
-                      }
-                    }}
+                  <circle
+                    fill={color(node["科目群"])}
+                    cx={node.x}
+                    cy={node.y}
+                    r={node.r}
+                    opacity={node["科目群"] === target ? 1 : 0.5}
                   >
-                    {node["令和２年度以降入学者"]}
-                  </text>
+                    <title>
+                      {node["令和２年度以降入学者"]}({node["科目群"]}):
+                      {node["教員名"]}
+                    </title>
+                  </circle>
                 </g>
               );
-            }
-          })}
+            })}
+          </g>
+          <g>
+            {Object.values(data.nodes).map((node) => {
+              if (node["科目群"] === target) {
+                return (
+                  <g key={node.id}>
+                    <text
+                      className="is-unselectable is-clickable"
+                      x={node.x}
+                      y={node.y}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontWeight="bold"
+                      onClick={() => {
+                        if (onClickNode) {
+                          onClickNode(node);
+                        }
+                      }}
+                    >
+                      {node["令和２年度以降入学者"]}
+                    </text>
+                  </g>
+                );
+              }
+            })}
+          </g>
         </g>
       </svg>
     </figure>
@@ -129,8 +131,6 @@ export default function App() {
       const data = await response.json();
       const nodes = {};
       for (const node of data.nodes) {
-        node.x *= 100;
-        node.y *= 100;
         nodes[node.id] = node;
       }
       data.nodes = nodes;
