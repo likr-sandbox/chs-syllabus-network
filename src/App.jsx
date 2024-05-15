@@ -39,6 +39,13 @@ const categories = [
   "化学科",
 ];
 
+function shorten(text, maxLength) {
+  if (text.length > maxLength) {
+    return text.slice(0, maxLength - 1) + "…";
+  }
+  return text;
+}
+
 function DrawingContent({ data, onClickNode, target }) {
   const color = d3.scaleOrdinal(d3.schemeCategory10);
   return (
@@ -54,7 +61,7 @@ function DrawingContent({ data, onClickNode, target }) {
               key={`${link.source}:${link.target}`}
               fill="none"
               stroke="#888"
-              strokeWidth='3'
+              strokeWidth="3"
               opacity="0.5"
               d={line([link.source, link.target])}
             />
@@ -78,7 +85,7 @@ function DrawingContent({ data, onClickNode, target }) {
                 cx={node.x}
                 cy={node.y}
                 r={node.r}
-                opacity={target.includes(node["科目ID"]) ? 1 : 0.5}
+                opacity={target.includes(node["科目ID"]) ? 1 : 0.3}
               >
                 <title>
                   {node["科目名"]}({node["科目群"]}):{node["教員名"]}
@@ -99,7 +106,7 @@ function DrawingContent({ data, onClickNode, target }) {
                   y={node.y}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fontSize="12"
+                  fontSize="20"
                   fontWeight="bold"
                   onClick={() => {
                     if (onClickNode) {
@@ -107,7 +114,7 @@ function DrawingContent({ data, onClickNode, target }) {
                     }
                   }}
                 >
-                  {node["科目名"]}
+                  {shorten(node["科目名"], 8)}
                 </text>
               </g>
             );
@@ -260,12 +267,35 @@ export default function App() {
     (async () => {
       const response = await fetch("syllabus-network.json");
       const data = await response.json();
+
+      data.forEach((item, i) => {
+        item.id = `${i}`;
+        const { x, y, r } = d3.packEnclose(item.nodes);
+        for (const node of item.nodes) {
+          node.x -= x;
+          node.y -= y;
+        }
+        item.r = r + 10;
+      });
+      data.sort((a, b) => b.r - a.r);
+      d3.packSiblings(data);
+
       const nodes = {};
-      for (const node of data.nodes) {
-        nodes[node.id] = node;
+      const links = [];
+      for (const item of data) {
+        for (const node of item.nodes) {
+          node.id = `${item.id}:${node.id}`;
+          node.x += item.x;
+          node.y += item.y;
+          nodes[node.id] = node;
+        }
+        for (const link of item.links) {
+          link.source = `${item.id}:${link.source}`;
+          link.target = `${item.id}:${link.target}`;
+          links.push(link);
+        }
       }
-      data.nodes = nodes;
-      setData(data);
+      setData({ nodes, links });
     })();
   }, []);
 
