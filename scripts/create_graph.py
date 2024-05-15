@@ -14,11 +14,13 @@ def main():
     graph = nx.Graph()
     n = A.shape[0]
     for u in range(n):
-        graph.add_node(u, words=words[u], vec=list(
-            X[u].toarray()[0]), **data[u])
-        del graph.nodes[u]['words']
-        del graph.nodes[u]['vec']
-        del graph.nodes[u]['授業計画']
+        graph.add_node(
+            u,
+            科目ID=u,
+            科目名=data[u].get('令和２年度以降入学者', ''),
+            科目群=data[u].get('科目群'),
+            教員名=data[u]['教員名'],
+        )
     for u in range(n):
         for v in range(u):
             if A[u, v] != 0:
